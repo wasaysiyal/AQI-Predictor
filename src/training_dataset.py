@@ -2,49 +2,52 @@
 import os
 import pandas as pd
 
-from src.hopsworks_client import get_hopsworks_project
+ARTIFACT_DIR = "artifacts"
+TRAIN_DATA_PATH = os.path.join(ARTIFACT_DIR, "train_data.parquet")
 
 FG_NAME = "daily_aqi_features"
 FG_VERSION = 1
-OUT_PATH = "artifacts/train_data.parquet"
 
+# Only REAL columns (avoid broken metadata feature name)
+BASE_FEATURES = [
+    "event_time",
+    "aqi_daily",
+    "pm10_mean",
+    "pm2_5_mean",
+    "ozone_mean",
+    "no2_mean",
+    "so2_mean",
+    "co_mean",
+    "weekday",
+]
 
 def create_training_data():
+    from src.hopsworks_client import get_hopsworks_project
+
     project = get_hopsworks_project()
     fs = project.get_feature_store()
 
-    fg = fs.get_feature_group(name=FG_NAME, version=FG_VERSION)
-    df = fg.read()
+    fg = fs.get_feature_group(FG_NAME, version=FG_VERSION)
 
-    # --- normalize schema ---
-    df["event_time_dt"] = pd.to_datetime(df["event_time"], errors="coerce")
-    df = df.dropna(subset=["event_time_dt"])
+    # ✅ IMPORTANT: avoid fg.read() (it selects the broken feature name)
+    df = fg.select(BASE_FEATURES).read()
 
-    df["aqi_daily"] = pd.to_numeric(df["aqi_daily"], errors="coerce")
-    df = df.dropna(subset=["aqi_daily"])
+    # Make sure event_time is sortable
+    df["event_time"] = pd.to_datetime(df["event_time"], errors="coerce")
+    df = df.dropna(subset=["event_time"]).sort_values("event_time").reset_index(drop=True)
 
-    # keep latest row per day if duplicates exist
-    df = df.sort_values("event_time_dt").drop_duplicates(subset=["event_time"], keep="last")
-    df = df.sort_values("event_time_dt").reset_index(drop=True)
-
-    # ✅ labels for 1/2/3-day ahead
+    # ✅ create 1/2/3 day labels
     df["label_aqi_day1"] = df["aqi_daily"].shift(-1)
     df["label_aqi_day2"] = df["aqi_daily"].shift(-2)
     df["label_aqi_day3"] = df["aqi_daily"].shift(-3)
 
-    # drop rows without labels (last 3 rows)
-    df = df.dropna(subset=["label_aqi_day1", "label_aqi_day2", "label_aqi_day3"]).reset_index(drop=True)
+    df = df.dropna().reset_index(drop=True)
 
-    # keep event_time as string (consistent)
-    df = df.drop(columns=["event_time_dt"])
-
-    os.makedirs("artifacts", exist_ok=True)
-    df.to_parquet(OUT_PATH, index=False)
-
-    print("Saved training data:", OUT_PATH)
+    os.makedirs(ARTIFACT_DIR, exist_ok=True)
+    df.to_parquet(TRAIN_DATA_PATH, index=False)
+    print(f"Saved training data: {TRAIN_DATA_PATH}")
     print("Shape:", df.shape)
-    print(df.tail(5))
-
+    print(df.tail())
 
 if __name__ == "__main__":
     create_training_data()
