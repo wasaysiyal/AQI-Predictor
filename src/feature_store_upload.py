@@ -8,6 +8,10 @@ from src.hopsworks_client import get_hopsworks_project
 from src.data_fetcher import fetch_daily_features
 
 
+FG_NAME = "daily_aqi_features_v2"
+FG_VERSION = 1
+
+
 def _wait_for_materialization(fg, timeout_s: int = 15 * 60, poll_s: int = 15):
     """
     Wait until materialization job finishes (or timeout).
@@ -22,7 +26,6 @@ def _wait_for_materialization(fg, timeout_s: int = 15 * 60, poll_s: int = 15):
 
         # if state is None, we still wait a bit and retry
         if state and str(state).upper() not in ("RUNNING", "STARTING"):
-            # final state
             try:
                 final = fg.materialization_job.get_final_state()
                 print(f"✅ Materialization job final state: {final}")
@@ -36,40 +39,54 @@ def _wait_for_materialization(fg, timeout_s: int = 15 * 60, poll_s: int = 15):
         time.sleep(poll_s)
 
 
-def upload_daily_features(lat=24.8607, lon=67.0011, days: int = 3, online_enabled=True):
+def upload_daily_features(
+    lat: float = 24.8607,
+    lon: float = 67.0011,
+    days: int = 3,
+    online_enabled: bool = False,  # ✅ IMPORTANT for GitHub Actions (no Kafka)
+):
+    # 1) Fetch data
     df = fetch_daily_features(lat=lat, lon=lon, days=days)
 
-    # ✅ enforce schema: your daily_aqi_features FG expects event_time as STRING
-    df["event_time"] = pd.to_datetime(df["event_time"], errors="coerce").dt.date.astype(str)
+    # 2) Enforce clean schema
+    # event_time should be TIMESTAMP, not string
+    df["event_time"] = pd.to_datetime(df["event_time"], errors="coerce", utc=True)
+
+    # Drop any bad rows
+    df = df.dropna(subset=["event_time"]).copy()
 
     print("Data ready for upload:\n", df)
 
+    # 3) Connect
     project = get_hopsworks_project()
     fs = project.get_feature_store()
 
+    # 4) Get or create clean feature group (NEW name)
     fg = fs.get_or_create_feature_group(
-        name="daily_aqi_features",
-        version=1,
+        name=FG_NAME,
+        version=FG_VERSION,
         primary_key=["event_time"],
-        description="Daily features and target for AQI forecasting",
+        description="Daily AQI features (clean schema v2)",
         online_enabled=online_enabled,
     )
 
+    # 5) Insert with retries
     max_attempts = 5
     for attempt in range(1, max_attempts + 1):
         try:
             fg.insert(df, write_options={"upsert": True})
+
             # ✅ always wait so next step reads the latest data
             _wait_for_materialization(fg)
-            print("✅ Upload completed successfully!")
+
+            print(f"✅ Upload completed successfully to {FG_NAME} v{FG_VERSION}!")
             return
 
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, OSError) as e:
             print(f"⚠️ Insert failed (attempt {attempt}/{max_attempts}): {e}")
 
-            # ✅ DO NOT re-trigger insert immediately.
             # Connection often drops AFTER job starts.
-            # So: wait for the running materialization job, then proceed.
+            # Wait for job completion; if it completes, treat as success.
             try:
                 _wait_for_materialization(fg)
                 print("✅ Upload likely succeeded (job finished after connection drop).")

@@ -27,7 +27,8 @@ def create_training_data():
     project = get_hopsworks_project()
     fs = project.get_feature_store()
 
-    fg = fs.get_feature_group(FG_NAME, version=FG_VERSION)
+    fg = fs.get_feature_group("daily_aqi_features_v2", version=1)
+
 
     # ✅ IMPORTANT: avoid fg.read() (it selects the broken feature name)
     df = fg.select(BASE_FEATURES).read()
