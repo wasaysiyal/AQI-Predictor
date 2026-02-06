@@ -1,0 +1,40 @@
+name: Daily Training + Inference
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 6 * * *"
+
+jobs:
+  train_and_predict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+      HOPSWORKS_PROJECT: ${{ secrets.HOPSWORKS_PROJECT }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build training dataset
+        run: |
+          python -m src.training_dataset
+
+      - name: Train + register models
+        run: |
+          python -m src.train
+
+      - name: Run batch inference (1/2/3 day) + store in FG
+        run: |
+          python -m src.batch_inference

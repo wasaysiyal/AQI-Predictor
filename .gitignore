@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.dist/
+.build/
+
+# Virtual env
+venv/
+.env
+.env.*
+*.env
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Artifacts / local outputs
+artifacts/
+*.joblib
+*.parquet
+*.png
+*.log
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
