@@ -13,6 +13,8 @@ jobs:
     env:
       HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
       HOPSWORKS_PROJECT: ${{ secrets.HOPSWORKS_PROJECT }}
+      HOPSWORKS_API_HOST: ${{ secrets.HOPSWORKS_API_HOST }}
+
 
     steps:
       - uses: actions/checkout@v4
