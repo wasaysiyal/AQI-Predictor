@@ -28,6 +28,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          
+      - name: Debug Hopsworks versions
+        run: |
+          python -c "import hopsworks, hsfs, hsml; print('hopsworks', hopsworks.__version__); print('hsfs', hsfs.__version__); print('hsml', hsml.__version__)"
+
 
       - name: Build training dataset
         run: |
