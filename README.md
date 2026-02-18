@@ -307,10 +307,19 @@ streamlit run app/app.py
 
 👨‍💻 Author
 
+<<<<<<< HEAD
 Abdul Wasay 
 Software Engineer
+=======
+Wasay Siyal
+Machine Learning & Systems Engineer
+>>>>>>> fb647ea (Professional portfolio README update)
 Pakistan
 
 📜 License
 
+<<<<<<< HEAD
 This project is licensed under the MIT License.
+=======
+This project is licensed under the MIT License.
+>>>>>>> fb647ea (Professional portfolio README update)
