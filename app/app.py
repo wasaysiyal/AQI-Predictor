@@ -58,21 +58,6 @@ def get_fs():
 
 fs = get_fs()
 
-def safe_read_fg(fg, *, name: str):
-    """
-    Try Query Service first (fast). If it fails on Streamlit Cloud, fall back to Spark.
-    """
-    try:
-        return fg.read()
-    except Exception as e:
-        st.warning(f"⚠️ Query Service failed while reading **{name}**. Falling back to Spark (slower).")
-        try:
-            return fg.read(read_options={"use_spark": True})
-        except Exception as e2:
-            st.error(f"❌ Failed reading **{name}** using both Query Service and Spark.")
-            st.exception(e2)
-            st.stop()
-
 # -----------------------------
 # Controls
 # -----------------------------
@@ -94,20 +79,29 @@ with right:
 # Read predictions from Hopsworks
 # -----------------------------
 pred_fg = fs.get_feature_group("aqi_predictions_v2", version=1)
-pred_df = safe_read_fg(pred_fg, name="aqi_predictions_v2")
+pred_df = pred_fg.read()
 
-pred_df["event_time"] = pd.to_datetime(pred_df.get("event_time"), errors="coerce", utc=True)
-pred_df["source_feature_time"] = pd.to_datetime(pred_df.get("source_feature_time"), errors="coerce", utc=True)
+# Parse times
+pred_df["event_time"] = pd.to_datetime(pred_df["event_time"], errors="coerce", utc=True)
+pred_df["source_feature_time"] = pd.to_datetime(pred_df["source_feature_time"], errors="coerce", utc=True)
 pred_df = pred_df.dropna(subset=["event_time", "source_feature_time"])
 
-if pred_df.empty:
+# Pick the latest run (by source_feature_time)
+latest_run_time = pred_df["source_feature_time"].max()
+latest_df = pred_df[pred_df["source_feature_time"] == latest_run_time].copy()
+
+# Keep only next 3 horizons
+latest_df = latest_df.sort_values(["horizon"], ascending=[True]).head(3)
+
+# If empty, show help
+if latest_df.empty:
     st.warning("No predictions found yet. Click **Run Prediction Now**.")
     st.stop()
 
-latest_run_time = pred_df["source_feature_time"].max()
-latest_df = pred_df[pred_df["source_feature_time"] == latest_run_time].copy()
-latest_df = latest_df.sort_values(["horizon"], ascending=[True]).head(3)
-
+# Model metadata (show on dashboard)
+# If different horizons use different models, show them all
+# -----------------------------
+# -----------------------------
 st.caption(f"Latest inference run (UTC): {latest_run_time}")
 
 st.markdown("### 🤖 Forecasting Model Used")
@@ -117,20 +111,39 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-def aqi_band(aqi: float):
-    if aqi <= 50:  return ("Good", "🟢")
-    if aqi <= 100: return ("Moderate", "🟡")
-    if aqi <= 150: return ("Unhealthy for Sensitive Groups", "🟠")
-    if aqi <= 200: return ("Unhealthy", "🔴")
-    if aqi <= 300: return ("Very Unhealthy", "🟣")
-    return ("Hazardous", "⚫")
 
+# -----------------------------
+# Premium AQI labeling
+# -----------------------------
+def aqi_band(aqi: float):
+    # Returns (label, emoji)
+    if aqi <= 50:
+        return ("Good", "🟢")
+    elif aqi <= 100:
+        return ("Moderate", "🟡")
+    elif aqi <= 150:
+        return ("Unhealthy (SG)", "🟠")
+    elif aqi <= 200:
+        return ("Unhealthy", "🔴")
+    elif aqi <= 300:
+        return ("Very Unhealthy", "🟣")
+    else:
+        return ("Hazardous", "⚫")
+
+# Convert to local date display if you want (Pakistan is UTC+5)
+# We'll show both: local date label and keep UTC internally
 local_tz = "Asia/Karachi"
+
 cards = st.columns(3, gap="large")
 
 for i, row in enumerate(latest_df.itertuples(index=False)):
-    event_time_local = row.event_time.tz_convert(local_tz)
-    pred_aqi_display = max(0.0, min(500.0, float(row.predicted_aqi)))
+    event_time_utc = row.event_time
+    event_time_local = event_time_utc.tz_convert(local_tz)
+
+    pred_aqi = float(row.predicted_aqi)
+    # If your model ever outputs negatives, clamp for display only:
+    pred_aqi_display = max(0.0, min(500.0, pred_aqi))
+
     band, emoji = aqi_band(pred_aqi_display)
 
     with cards[i]:
@@ -142,45 +155,89 @@ for i, row in enumerate(latest_df.itertuples(index=False)):
             f"<span class='muted'> • Horizon: {int(row.horizon)} day(s)</span></div>",
             unsafe_allow_html=True,
         )
+  
+        
         st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 
+# Optional: also show a clean table below
+show_table = st.toggle("Show raw table", value=False)
+if show_table:
+    show_df = latest_df.copy()
+    show_df["event_time_local"] = show_df["event_time"].dt.tz_convert(local_tz)
+    show_df = show_df[["event_time_local", "event_time", "horizon", "predicted_aqi", "model_name", "model_version", "source_feature_time"]]
+    st.dataframe(show_df, width="stretch")
 # -----------------------------
-# Chart (history + forecast)
+# Footer
+# -----------------------------
+# -----------------------------
+# 📈 Live AQI Forecast Chart
 # -----------------------------
 st.markdown("### 📈 AQI Trend & Forecast")
 
+# Get recent historical AQI from feature store
 feat_fg = fs.get_feature_group("daily_aqi_features_v2", version=1)
-hist_df = safe_read_fg(feat_fg, name="daily_aqi_features_v2")
+hist_df = feat_fg.read()
 
-hist_df["event_time"] = pd.to_datetime(hist_df.get("event_time"), errors="coerce", utc=True)
-hist_df = hist_df.dropna(subset=["event_time"]).sort_values("event_time").tail(14)
+hist_df["event_time"] = pd.to_datetime(hist_df["event_time"], errors="coerce", utc=True)
+hist_df = hist_df.dropna(subset=["event_time"])
 
-forecast_df = latest_df[["event_time", "predicted_aqi"]].rename(columns={"predicted_aqi": "aqi_daily"})
-chart_df = pd.concat([hist_df[["event_time", "aqi_daily"]], forecast_df], ignore_index=True).sort_values("event_time")
+# Keep last 14 days of history
+hist_df = hist_df.sort_values("event_time").tail(14)
+
+# Prepare forecast data
+forecast_df = latest_df.copy()
+forecast_df = forecast_df[["event_time", "predicted_aqi"]]
+forecast_df = forecast_df.rename(columns={"predicted_aqi": "aqi_daily"})
+
+# Merge history + forecast
+chart_df = pd.concat([
+    hist_df[["event_time", "aqi_daily"]],
+    forecast_df
+])
+
+chart_df = chart_df.sort_values("event_time")
 
 chart_df_display = chart_df.copy()
 chart_df_display["event_time"] = chart_df_display["event_time"].dt.tz_convert(local_tz)
 
-st.line_chart(chart_df_display.set_index("event_time")[["aqi_daily"]], height=350, width="stretch")
+st.line_chart(
+    chart_df_display.set_index("event_time"),
+    height=350,
+    width="stretch"
+)
 
 st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 
+
 # -----------------------------
-# AQI Guide + Footer
+# 🌈 AQI Level Guide
 # -----------------------------
 st.markdown("### 🌈 AQI Health Levels Guide")
-st.markdown(
-    """
-🟢 **0–50 (Good)** – Satisfactory  
-🟡 **51–100 (Moderate)** – Acceptable, some risk for sensitive groups  
-🟠 **101–150 (Unhealthy for Sensitive Groups)**  
-🔴 **151–200 (Unhealthy)**  
-🟣 **201–300 (Very Unhealthy)**  
-⚫ **301–500 (Hazardous)**
+
+aqi_legend = """
+🟢 **0 – 50 (Good)**  
+Air quality is satisfactory, and air pollution poses little or no risk.
+
+🟡 **51 – 100 (Moderate)**  
+Air quality is acceptable; some pollutants may be a concern for sensitive individuals.
+
+🟠 **101 – 150 (Unhealthy for Sensitive Groups)**  
+Sensitive groups may experience health effects.
+
+🔴 **151 – 200 (Unhealthy)**  
+Everyone may begin to experience health effects.
+
+🟣 **201 – 300 (Very Unhealthy)**  
+Health alert: everyone may experience more serious effects.
+
+⚫ **301 – 500 (Hazardous)**  
+Health warning of emergency conditions.
 """
-)
+
+st.markdown(aqi_legend)
+
 
 st.markdown(
     """
@@ -190,5 +247,5 @@ st.markdown(
         © 2026 AQI Predictor Project
     </div>
     """,
-    unsafe_allow_html=True,
+    unsafe_allow_html=True
 )
