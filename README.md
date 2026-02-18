@@ -1,4 +1,13 @@
-🌫️ AQI Forecasting System
+# 🌫️ AQI Forecasting System
+
+![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
+![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red?logo=streamlit)
+![Hopsworks](https://img.shields.io/badge/Hopsworks-Feature%20Store-orange)
+![MLOps](https://img.shields.io/badge/MLOps-CI/CD-green)
+![XGBoost](https://img.shields.io/badge/Model-XGBoost-yellow)
+![License](https://img.shields.io/badge/License-MIT-lightgrey)
+![Status](https://img.shields.io/badge/Status-Production--Ready-brightgreen)
+
 
 An end-to-end production-grade machine learning pipeline for multi-day Air Quality Index (AQI) forecasting using Hopsworks Feature Store, XGBoost, GitHub Actions, and Streamlit Cloud.
 
@@ -30,14 +39,32 @@ Production-safe app design
 
 The entire pipeline — from feature engineering to cloud dashboard visualization — follows modern MLOps principles.
 
-🧩 Technologies Used
+---
 
-🧰 Python (Pandas, NumPy, Scikit-learn, XGBoost)
-☁️ Hopsworks Feature Store (Offline Store)
-⚙️ GitHub Actions (CI/CD automation)
-📊 Streamlit Cloud (Frontend deployment)
-📦 PyArrow (Efficient feature store reads)
-🧠 Machine Learning Regression Models
+## 🧠 Technology Stack
+
+| Layer | Technology |
+|-------|------------|
+| Language | Python 3.10+ |
+| ML Framework | Scikit-learn, XGBoost |
+| Feature Store | Hopsworks |
+| Data Processing | Pandas, NumPy |
+| CI/CD | GitHub Actions |
+| Deployment | Streamlit Cloud |
+| Storage | Hopsworks Feature Store |
+
+
+---
+
+## 🔄 MLOps Workflow
+
+1. Daily data ingestion pipeline
+2. Feature store synchronization
+3. Automated model retraining
+4. Batch inference execution
+5. Dashboard auto-refresh deployment
+6. CI/CD via GitHub Actions
+
 
 ⚙️ Key Features
 
