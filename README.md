@@ -99,46 +99,32 @@ Streamlit Dashboard (Cloud Deployment)
 
 ## 📁 Project Structure
 
-AQI Prediction Bot/
+aqi-predictor/
 │
 ├── .github/
 │ └── workflows/
-│ ├── feature_pipeline.yml # Daily feature ingestion pipeline
-│ └── training_pipeline.yml # Daily model retraining pipeline
+│ ├── feature_pipeline.yml
+│ └── training_pipeline.yml
 │
-├── data/ # Local data folders (disabled in CI mode)
+├── app/
+│ └── app.py # Streamlit dashboard
 │
-├── models/
-│ └── best_model_random_forest.pkl # Final trained model
+├── src/
+│ ├── batch_inference.py # Batch prediction logic
+│ ├── feature_pipeline.py # Feature engineering pipeline
+│ ├── hopsworks_client.py # Hopsworks authentication
+│ └── train_model.py # Model training script
 │
 ├── notebooks/
-│ ├── 01_eda_preprocessing.ipynb # EDA Phase 1 (data cleaning + outliers)
-│ └── 02_eda_feature_analysis.ipynb # EDA Phase 2 (feature correlation)
+│ ├── 01_eda.ipynb
+│ └── model_experiments.ipynb
 │
-├── reports/
-│ └── Final Report.pdf
-├── src/
-│ ├── aqi_utils.py # EPA-based AQI computation
-│ ├── backfill_data.py # Historical data (1 year) fetching
-│ ├── clean_data.py # Cleans raw merged dataset
-│ ├── config.py # Configuration (API URLs, paths)
-│ ├── fetch_data.py # Fetches air + weather data
-│ ├── process_data.py # Converts raw JSON to DataFrame
-│ ├── process_features.py # Feature engineering and selection
-│ ├── merge_features.py # Merges pollutant and weather data
-│ ├── upload_to_hopswork.py # Uploads data to Hopsworks Feature Store
-│ ├── run_feature_pipeline.py # Orchestrates end-to-end feature pipeline
-│ ├── train_model.py # Trains Ridge, RF, and XGBoost models
-│ └── predict_evaluate.py # Forecasts next 3-day AQI
+├── models/
+│ └── best_model.pkl
 │
-├── streamlit_app/
-│ ├── app.py # Streamlit frontend
-│ └── utils.py # Helper functions 
-│
-├── .env # Contains HOPSWORKS_API_KEY (hidden on git)
-├── requirements.txt # Project dependencies
-├── run_frontend.bat # Script to launch frontend locally
-└── README.md # Documentation
+├── requirements.txt
+├── .env (excluded from git)
+└── README.md
 
 
 📊 Data & Feature Engineering
