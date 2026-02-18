@@ -97,33 +97,33 @@ Predictions Feature Group (aqi_predictions_v2)
 Streamlit Dashboard (Cloud Deployment)
 
 
-📁 Project Structure
+## 📁 Project Structure
 
 aqi-predictor/
 │
 ├── .github/
-│   └── workflows/
-│       ├── feature_pipeline.yml
-│       └── training_pipeline.yml
+│ └── workflows/
+│ ├── feature_pipeline.yml
+│ └── training_pipeline.yml
 │
 ├── app/
-│   └── app.py                  # Streamlit dashboard
+│ └── app.py # Streamlit dashboard
 │
 ├── src/
-│   ├── batch_inference.py      # Batch prediction logic
-│   ├── hopsworks_client.py     # Hopsworks authentication
-│   ├── train_model.py          # Model training script
-│   └── feature_pipeline.py     # Feature engineering pipeline
+│ ├── batch_inference.py # Batch prediction logic
+│ ├── feature_pipeline.py # Feature engineering pipeline
+│ ├── hopsworks_client.py # Hopsworks authentication
+│ └── train_model.py # Model training script
 │
 ├── notebooks/
-│   ├── 01_eda.ipynb
-│   └── model_experiments.ipynb
+│ ├── 01_eda.ipynb
+│ └── model_experiments.ipynb
 │
 ├── models/
-│   └── best_model.pkl
+│ └── best_model.pkl
 │
 ├── requirements.txt
-├── .env                        # Excluded from git
+├── .env (excluded from git)
 └── README.md
 
 
