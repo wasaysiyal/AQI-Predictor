@@ -97,6 +97,7 @@ Predictions Feature Group (aqi_predictions_v2)
 Streamlit Dashboard (Cloud Deployment)
 
 📁 Project Structure
+
 aqi-predictor/
 │
 ├── .github/
@@ -123,6 +124,7 @@ aqi-predictor/
 ├── requirements.txt
 ├── .env (excluded from git)
 └── README.md
+
 
 
 📊 Data & Feature Engineering
