@@ -78,49 +78,25 @@ The entire pipeline — from feature engineering to cloud dashboard visualizatio
 ✅ Secure API key handling via environment secrets
 ✅ CI/CD integration via GitHub Actions
 
-🧩 System Architecture
-+-----------------------+
-| Historical AQI Data   |
-+-----------+-----------+
-            |
-            v
-+-----------------------+
-| Feature Engineering   |
-| (Lag, Rolling Stats)  |
-+-----------+-----------+
-            |
-            v
-+-----------------------+
-| Hopsworks Feature     |
-|       Store           |
-| daily_aqi_features_v2 |
-+-----------+-----------+
-            |
-            v
-+-----------------------+
-| Model Training        |
-| XGBoost Regression    |
-+-----------+-----------+
-            |
-            v
-+-----------------------+
-| Batch Inference       |
-| (Manual Trigger)      |
-+-----------+-----------+
-            |
-            v
-+-----------------------+
-| aqi_predictions_v2    |
-| Feature Group         |
-+-----------+-----------+
-            |
-            v
-+-----------------------+
-| Streamlit Dashboard   |
-| (Cloud Deployed)      |
-+-----------------------+
 
-📁 Folder Structure
+🏗️ System Architecture
+Open-Meteo API
+        ↓
+Historical AQI Data
+        ↓
+Feature Engineering (Lag, Rolling Statistics)
+        ↓
+Hopsworks Feature Store (daily_aqi_features_v2)
+        ↓
+Model Training (XGBoost Regression)
+        ↓
+Batch Inference (Manual Trigger)
+        ↓
+Predictions Feature Group (aqi_predictions_v2)
+        ↓
+Streamlit Dashboard (Cloud Deployment)
+
+📁 Project Structure
 aqi-predictor/
 │
 ├── .github/
@@ -129,13 +105,13 @@ aqi-predictor/
 │       └── training_pipeline.yml
 │
 ├── app/
-│   └── app.py                # Streamlit frontend
+│   └── app.py                  # Streamlit dashboard
 │
 ├── src/
-│   ├── batch_inference.py    # Batch prediction logic
-│   ├── hopsworks_client.py   # Hopsworks authentication
-│   ├── train_model.py        # Model training script
-│   └── feature_pipeline.py   # Feature engineering logic
+│   ├── batch_inference.py      # Batch prediction logic
+│   ├── hopsworks_client.py     # Hopsworks authentication
+│   ├── train_model.py          # Model training script
+│   └── feature_pipeline.py     # Feature engineering pipeline
 │
 ├── notebooks/
 │   ├── 01_eda.ipynb
@@ -147,6 +123,7 @@ aqi-predictor/
 ├── requirements.txt
 ├── .env (excluded from git)
 └── README.md
+
 
 📊 Data & Feature Engineering
 Feature Group: daily_aqi_features_v2
@@ -336,10 +313,7 @@ streamlit run app/app.py
 
 Abdul Wasay 
 Software Engineer
-=======
-Wasay Siyal
-Software Engineer
-Pakistan
+
 
 📜 License
 
