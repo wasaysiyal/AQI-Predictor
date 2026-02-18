@@ -171,47 +171,9 @@ if show_table:
 # -----------------------------
 # Footer
 # -----------------------------
-# -----------------------------
-# 📈 Live AQI Forecast Chart
-# -----------------------------
-st.markdown("### 📈 AQI Trend & Forecast")
-
-# Get recent historical AQI from feature store
-feat_fg = fs.get_feature_group("daily_aqi_features_v2", version=1)
-hist_df = feat_fg.read()
-
-hist_df["event_time"] = pd.to_datetime(hist_df["event_time"], errors="coerce", utc=True)
-hist_df = hist_df.dropna(subset=["event_time"])
-
-# Keep last 14 days of history
-hist_df = hist_df.sort_values("event_time").tail(14)
-
-# Prepare forecast data
-forecast_df = latest_df.copy()
-forecast_df = forecast_df[["event_time", "predicted_aqi"]]
-forecast_df = forecast_df.rename(columns={"predicted_aqi": "aqi_daily"})
-
-# Merge history + forecast
-chart_df = pd.concat([
-    hist_df[["event_time", "aqi_daily"]],
-    forecast_df
-])
-
-chart_df = chart_df.sort_values("event_time")
-
-chart_df_display = chart_df.copy()
-chart_df_display["event_time"] = chart_df_display["event_time"].dt.tz_convert(local_tz)
-
-st.line_chart(
-    chart_df_display.set_index("event_time"),
-    height=350,
-    width="stretch"
-)
-
 st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 
 
-# -----------------------------
 # 🌈 AQI Level Guide
 # -----------------------------
 st.markdown("### 🌈 AQI Health Levels Guide")
@@ -238,7 +200,6 @@ Health warning of emergency conditions.
 
 st.markdown(aqi_legend)
 
-
 st.markdown(
     """
     <div style="text-align:center; opacity:0.6; font-size:13px;">
@@ -249,3 +210,5 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+
